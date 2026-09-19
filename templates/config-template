@@ -1,0 +1,13 @@
+# agent-handoff 配置文件
+# 位置：~/.agent-handoff/config
+# 注意：本文件绝不存储任何凭据/token/密码。git/gh 认证复用系统已有配置。
+
+# 交接总仓（hub）的 GitHub 地址（HTTPS 或 SSH 均可）
+hub_url=https://github.com/<你的用户名>/handoff-hub.git
+
+# hub 在本地的 clone 路径
+hub_local=/home/<你的用户名>/.agent-handoff/hub
+
+# 本机 agent 的显示名（用于交接文档署名、INDEX 更新者列、冲突文件/wip 分支命名）
+# 例如：DeepSeek Harness / Codex / Claude Code / Minis
+agent_name=<你的 agent 名>
