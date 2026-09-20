@@ -1,10 +1,22 @@
 # FALLBACK — 降级环境使用指南
 
-本指南面向**无法执行 git/shell** 的环境（如部分 IDE agent：Cursor、Windsurf 在某些配置下），以及尚未安装本 Skill 的 agent。
+本指南面向两类受限环境：
+1. **无法执行 git/shell** 的环境（如部分 IDE agent：Cursor、Windsurf 在某些配置下）；
+2. **能 git 但装不了 hook** 的环境（如某些 IDE 的 git 封装、hook 被项目策略禁用的场景）。
 
 ## 核心原则
 
 降级 agent **只读、不直接写 hub**。它产出一份「建议文件」，由有 git 能力的 agent（或你手动）合并进 hub。这样避免降级环境（拿不到远端最新状态）写出过期/冲突的内容。
+
+## 〇、能 git 但装不了 hook 的环境
+
+这类 agent 能正常 `commit`/`push`，只是 `.git/hooks/post-commit` 不生效（被 IDE 封装绕过、或 `core.hooksPath` 指向别处）。**它不靠 hook，直接按 SKILL.md §14.1 的指令做**：
+
+- **每完成一个小步**：`git commit` 后**主动 `git push origin dev`**（能推就推，失败暂缓攒着）；
+- **重要节点**（功能完成/方案敲定/用户说存档/交接前）：commit 加 `[important]` 前缀，`git push` 后**校验退出码**，失败停下提示「需要 git 认证」；
+- **交接前**：无论之前推没推成功，都再 `git push` 一次并 `git status` 确认 `ahead=0`。
+
+> 核心是「**指令为主、hook 为辅**」：hook 只是自动挡，没有它，靠自觉遵守 §14.1 也能达成「普通提交留痕、重要提交必上云」。
 
 ## 一、如何「读取」交接（接力继续工作）
 

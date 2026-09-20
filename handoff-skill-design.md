@@ -438,6 +438,10 @@ hub pull 遇文档冲突：双份保留——旧版重命名 `冲突-<YYYYMMDD-H
 
 ### 关键实现点（均经实测）
 
+**指令为主、hook 为辅**：hook 不是必需组件，只是「有 hook 能力环境」的自动加速器。真正的主体规则写在 SKILL.md §14.1 指令里，所有 agent（含装不了 hook 的）都遵守：普通 commit 后主动 push（失败可暂缓）、重要 commit 显式 push 校验、交接前补推校验。装不了 hook 的环境靠指令达成同样的「普通留痕、重要必上云」结果。
+
+
+
 1. post-commit hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」幂等安装。
 2. hook 仅对 dev 分支生效（`git symbolic-ref --short HEAD` 判断）。
 3. hook 强制非交互（`GIT_TERMINAL_PROMPT=0`、`GIT_ASKPASS=/bin/true`），实测无凭据时 commit 不卡死。

@@ -248,27 +248,25 @@ if ! git push --force-with-lease=dev:"$OLD_DEV" origin dev; then echo "dev 被�
 ## 14. 分级提交与推送（项目状态实时上云）
 
 > 目标：项目 repo 的 dev 分支成为「完整真相」，任何状态都在 GitHub。普通提交留痕即可、重要提交必须上云。
+> **指令为主、hook 为辅**：下方 §14.1 的规则是所有 agent（含装不了 hook 的）都必须遵守的；hook 只是部分环境的自动加速器，装了更省心，装不了也按指令手做。
 
-### 14.1 三档提交
+### 14.1 三档提交（所有 agent 必须遵守的指令）
 
 | 档位 | 时机 | 动作 |
 |---|---|---|
-| **普通 commit** | 每个小步（改函数/调通一段/修警告） | 本地 `git commit`；post-commit hook 自动尝试 `git push origin dev`，**失败静默**（攒着） |
+| **普通 commit** | 每个小步（改函数/调通一段/修警告） | 本地 `git commit`；随后**主动 `git push origin dev`**（能推就推，失败可暂缓攒着，不打断工作） |
 | **重要 commit** | 功能完成 / bug 修复 / 方案敲定 / 测试通过 / 用户明说「存一下」「存档」/ 交接前 | commit message 加 `[important]` 前缀；**显式 `git push origin dev` 并校验退出码**，失败 → 停下提示「需要 git 认证」，不静默 |
-| **交接沉淀** | §3 沉淀流程 | 补推所有攒着的普通 commit（`git push` 天然带上全部未推送提交） |
+| **交接沉淀** | §3 沉淀流程 | 补推所有攒着的普通 commit（`git push` 天然带上全部未推送提交），**并校验 `git status` 确认 ahead=0** |
 
-### 14.2 post-commit hook（自动推送）
+> 无法装 hook 的环境，普通 commit 的自动推送就靠这条指令：**agent 每完成一个小步，commit 后顺手 push**；若 push 失败（弱网/无凭据），记在心里，在下一个「重要 commit」或「交接沉淀」时一起补推。交接前无论如何都要校验补推（双保险）。
 
-- hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」步骤幂等安装（`scripts/install-project-hook.sh`）。
+### 14.2 post-commit hook（可选自动加速器）
+
+- 仅对有 hook 能力的环境生效；hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」步骤幂等安装（`scripts/install-project-hook.sh`）。
 - hook 仅对 **dev 分支**生效（`git symbolic-ref --short HEAD` 判断，非 dev 跳过）。
 - hook 强制非交互（`GIT_TERMINAL_PROMPT=0`、`GIT_ASKPASS=/bin/true`），防止无凭据/弱网时卡死 commit。
 - 普通 commit push 失败静默；`[important]` 前缀的 commit push 失败回显警告。
-
-### 14.3 补推的安全前提（跨 reset 边界）
-
-交接前补推时，先 `git fetch` 并做拓扑判定：
-- `is-ancestor 本地dev origin/dev` 为真（本地落后）→ 正常补推；
-- 本地领先/分叉（期间发生过 dev force-reset）→ 走 §5a wip 留痕流程，不直推。
+- **hook 不是必需的**：装不了 hook 的环境，靠 §14.1 的指令达成同样的结果。
 
 ### 14.4 增量定位（不依赖书签）
 
