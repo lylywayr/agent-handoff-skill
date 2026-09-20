@@ -45,6 +45,7 @@ git reset --hard origin/main >/dev/null 2>&1
 TS="$(date +%Y%m%d-%H%M%S)"
 DOC_PUSHED=0
 DOC_COMMIT=""
+DOC_RESIDUE=""
 doc_tries=0
 while [ "$doc_tries" -lt 3 ]; do
   git fetch --prune origin main >/dev/null 2>&1 || die "无法刷新 hub 的 origin/main。"
@@ -76,10 +77,11 @@ while [ "$doc_tries" -lt 3 ]; do
   fi
   # push 被并发更新或网络暂时拒绝时，下一轮从最新远端重建提交。
   # CONTENT_FILE 与 CONTENT 仍在本次进程内，文档内容不会因 reset 丢失。
+  DOC_RESIDUE="$DOC_COMMIT"
   doc_tries=$((doc_tries+1))
 done
 if [ "$DOC_PUSHED" -ne 1 ]; then
-  die "交接文档 push 失败；文档提交保留在本地 $DOC_COMMIT（路径：$f），未继续修改 INDEX。"
+  die "交接文档 push 失败；文档提交保留在本地 $DOC_RESIDUE（当前文件：$f），未继续修改 INDEX。"
 fi
 
 # ── 更新 INDEX（真实 CAS：blob 比对 + push 非快进兜底）──
