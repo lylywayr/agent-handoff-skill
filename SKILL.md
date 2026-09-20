@@ -243,4 +243,38 @@ if ! git push --force-with-lease=dev:"$OLD_DEV" origin dev; then echo "dev 被�
 
 ## 13. 明确不做
 
-不做实时双向协同；不做对话全量回放；不做代码冲突 auto-merge；不接管任务调度；不追求全局时间全序。
+不做实时双向协同；不做对话全量回放；不做代码冲突 auto-merge；不接管任务调度；不追求全局时间全序；不做书签增量读（增量定位用 git 原生 `log`/`diff`）。
+
+## 14. 分级提交与推送（项目状态实时上云）
+
+> 目标：项目 repo 的 dev 分支成为「完整真相」，任何状态都在 GitHub。普通提交留痕即可、重要提交必须上云。
+
+### 14.1 三档提交
+
+| 档位 | 时机 | 动作 |
+|---|---|---|
+| **普通 commit** | 每个小步（改函数/调通一段/修警告） | 本地 `git commit`；post-commit hook 自动尝试 `git push origin dev`，**失败静默**（攒着） |
+| **重要 commit** | 功能完成 / bug 修复 / 方案敲定 / 测试通过 / 用户明说「存一下」「存档」/ 交接前 | commit message 加 `[important]` 前缀；**显式 `git push origin dev` 并校验退出码**，失败 → 停下提示「需要 git 认证」，不静默 |
+| **交接沉淀** | §3 沉淀流程 | 补推所有攒着的普通 commit（`git push` 天然带上全部未推送提交） |
+
+### 14.2 post-commit hook（自动推送）
+
+- hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」步骤幂等安装（`scripts/install-project-hook.sh`）。
+- hook 仅对 **dev 分支**生效（`git symbolic-ref --short HEAD` 判断，非 dev 跳过）。
+- hook 强制非交互（`GIT_TERMINAL_PROMPT=0`、`GIT_ASKPASS=/bin/true`），防止无凭据/弱网时卡死 commit。
+- 普通 commit push 失败静默；`[important]` 前缀的 commit push 失败回显警告。
+
+### 14.3 补推的安全前提（跨 reset 边界）
+
+交接前补推时，先 `git fetch` 并做拓扑判定：
+- `is-ancestor 本地dev origin/dev` 为真（本地落后）→ 正常补推；
+- 本地领先/分叉（期间发生过 dev force-reset）→ 走 §5a wip 留痕流程，不直推。
+
+### 14.4 增量定位（不依赖书签）
+
+A→B→A 场景，A 回归时用 git 原生能力看 B 推进了什么（**无需任何书签机制**）：
+```sh
+git fetch origin && git log --oneline origin/dev          # B 的提交一览
+git diff <某commit>..origin/dev                            # 任意两点间的代码变化
+```
+全新 agent 则读最新一份交接快照（完整状态）冷启动。
