@@ -1,0 +1,35 @@
+{
+  "name": "agent-handoff",
+  "version": "0.4.0",
+  "description": "跨 AI agent 工作接力：沉淀工作状态到 GitHub 私有交接总仓，另一 agent 读取后无缝继续",
+  "entry": "SKILL.md",
+  "scriptsDir": "scripts/",
+  "templatesDir": "templates/",
+  "scripts": [
+    "scripts/init-hub.sh",
+    "scripts/save-handoff.sh",
+    "scripts/list-active.sh",
+    "scripts/install-project-hook.sh"
+  ],
+  "templates": [
+    "templates/handoff-template.md",
+    "templates/index-template.md",
+    "templates/project-readme-template.md",
+    "templates/config-template",
+    "templates/post-commit-hook"
+  ],
+  "docs": [
+    "FALLBACK.md",
+    "README.md",
+    "handoff-skill-design.md"
+  ],
+  "capabilities": [
+    "cross-agent-handoff",
+    "work-state-persistence",
+    "git-based-sync",
+    "conflict-resolution",
+    "credential-scanning",
+    "tiered-commit-push"
+  ],
+  "homepage": "https://github.com/lylywayr/agent-handoff-skill"
+}

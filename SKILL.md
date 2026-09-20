@@ -1,5 +1,6 @@
 ---
 name: agent-handoff
+version: 0.4.0
 description: 跨 AI agent 工作接力。当用户说"交接一下""存档进度""接着上次做""继续之前的任务"，或会话进入收尾/任务切换阶段时使用。将工作状态沉淀到 GitHub 私有交接总仓，或从仓库读取状态无缝恢复工作，支持 DeepSeek Harness / Codex / Claude Code / OpenMinis，IDE agent 优雅降级。
 ---
 
