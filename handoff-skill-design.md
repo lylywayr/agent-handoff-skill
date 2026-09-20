@@ -402,6 +402,7 @@ fi
 INDEX 更新采用「fetch 后比对 **INDEX.md 的 blob SHA**（非整个 hub HEAD，避免无关项目并发触发误重试），变了就重判归属再提交」。取 blob SHA 的命令（已实测）：`git rev-parse origin/main:INDEX.md`（fetch 后返回远端 INDEX.md 的 blob SHA；与本地待提交版本比对，不同则重判）。**重试上限 3 次**，超限转 §5.3 语义合并路径。序列号仅在 CAS 写回 INDEX 成功后生效，撞号时 CAS 冲突重取。
 
 为满足「文档 commit 先于 INDEX 指针」且避免 CAS 失败丢文档，保存实现采用两阶段提交：先将交接文档（首次建项目时含 README）commit 并 push 到 `origin/main`，再基于最新 INDEX 生成指针并 CAS push。INDEX 阶段允许 `reset --hard origin/main`，因为文档副本已经在远端；文档阶段 push 失败则保留本地提交并停止，不修改 INDEX。
+
 ### 5.5 文档冲突裁决
 
 hub pull 遇文档冲突：双份保留——旧版重命名 `冲突-<YYYYMMDD-HHmm>-<agent名>.md` 存档；**以远端版本为准、本地版存档，不做内容级 merge**；INDEX 追加冲突记录；下次交互一句话告知。
