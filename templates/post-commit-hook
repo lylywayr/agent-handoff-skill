@@ -1,0 +1,31 @@
+#!/bin/sh
+# post-commit hook — 普通 commit 的静默自动推送（agent-handoff 分级提交机制）
+# 由 scripts/install-project-hook.sh 幂等安装到【项目 repo】的 .git/hooks/post-commit
+#
+# 职责：仅对 dev 分支生效，commit 后尝试 push origin dev，失败静默（攒着，交接时补推）。
+# 重要 commit（[important] 前缀）不静默：push 失败时回显警告，由 agent 显式处理。
+# 强制非交互，防止无凭据/弱网时卡死 commit（符合「不中断」承诺）。
+
+# 仅在 dev 分支上推送（其他分支 commit 跳过）
+branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+[ "$branch" = "dev" ] || exit 0
+
+# 强制非交互：无凭据时立即失败而非等待输入
+export GIT_TERMINAL_PROMPT=0
+export GIT_ASKPASS=/bin/true
+
+# 判断本条 commit 是否标记为重要
+msg="$(git log -1 --format=%B 2>/dev/null || true)"
+case "$msg" in
+  *"[important]"*) important=1 ;;
+  *) important=0 ;;
+esac
+
+if git push origin dev >/dev/null 2>&1; then
+  : # 推送成功，静默
+else
+  if [ "$important" = 1 ]; then
+    echo "⚠️  agent-handoff: 重要 commit 推送失败，请检查 git 认证后手动 git push origin dev" >&2
+  fi
+  # 普通 commit 推送失败：静默，攒在本地，交接沉淀时补推
+fi

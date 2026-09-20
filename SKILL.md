@@ -1,5 +1,6 @@
 ---
 name: agent-handoff
+version: 1.0.0
 description: 跨 AI agent 工作接力。当用户说"交接一下""存档进度""接着上次做""继续之前的任务"，或会话进入收尾/任务切换阶段时使用。将工作状态沉淀到 GitHub 私有交接总仓，或从仓库读取状态无缝恢复工作，支持 DeepSeek Harness / Codex / Claude Code / OpenMinis，IDE agent 优雅降级。
 ---
 
@@ -190,10 +191,23 @@ git checkout dev && git reset --hard origin/dev
 3. **私有默认 + 转 public 强扫**：建仓默认 `--private`；用户声明公开才 `--public` 并留痕；**任何转 public/建 public 前强制全历史扫描**。
 4. **无网络凭据依赖**：git 推送复用本机 git/gh 认证，Skill 不存储、不询问 token；config 不含凭据。
 5. **.gitignore 双保险**：hub 初始化加入 `.env`、`*.pem`、`*.key`、`secrets*`。
+6. **跨终端可达性（交接的本质前提）**：交接文档/项目 README/notes 里的每条信息，接收 agent 在**另一台机器**上读到后必须能直接使用。规则：
+   - **可写**：GitHub 仓库地址、分支名、commit hash、issue/PR 链接、仓库内相对路径、标准约定路径（`~/.agent-handoff/...`，每个 agent 解析自己的 `~`）、复现命令。
+   - **禁写**：本机绝对路径（`/vol2/...`、`/home/...`、`C:\...`）、原 agent 的部署/安装位置（如「已装到 DSH 的 dsh-data/...」）、原终端环境状态（如「本机无 gh」「$HOME 不可写」「本机 clone 在某路径」）、依赖会话上下文的引用（如「本会话我们讨论了...」「上一轮的辩论」——接收方没有这段会话）。
+   - 描述环境需求时写「**需要某环境具备 X**」，不写「我这台机器没有 X」。
+   - commit hash 跨终端有效（指向同一远端仓库）可写；但「本地未推送改动」「本机临时文件」只对本机有效，不写。
 
 ## 9. 交接文档模板
 
 见 `templates/handoff-template.md`。要点：front-matter（`origin`、`wip-status`；普通交接省略 `merged`，仅 degraded 建议带 `merged: false`）+ 中文正文（一句话目标 / 项目指针[仓库,工作分支 dev,相关目录,wip 分支] / 当前进度 / 下一步 / 关键决策 / 上下文指针 / 阻塞）。**语言细则**：描述全中文；代码、路径、分支名、repo 地址、commit hash 等标识符**保持原样，严禁翻译**。
+
+### 9a. 过程附件（可选，摘要为主 + 附件为辅）
+
+交接正文始终是**结构化摘要**（不搬会话原文）。但当接收方需要了解工作过程时，允许把**提炼后的**过程记录作为附件存到 hub 本项目文件夹 `notes/` 下：
+- 内容：关键讨论结论、被否决的方案及原因、重要的中间产物说明、多轮评审/辩论的要点——**提炼后的记录，不是对话原文**；
+- 命名：`notes/<YYYYMMDD>-<主题>.md`；
+- 在交接文档「过程附件」节列出文件名，接收方按需取读；
+- 附件同样遵守凭据扫描与跨终端可达性规则。
 
 ## 10. 并发与一致性（实现时遵循，细节见设计文档）
 
@@ -230,4 +244,36 @@ if ! git push --force-with-lease=dev:"$OLD_DEV" origin dev; then echo "dev 被�
 
 ## 13. 明确不做
 
-不做实时双向协同；不做对话全量回放；不做代码冲突 auto-merge；不接管任务调度；不追求全局时间全序。
+不做实时双向协同；不做对话全量回放；不做代码冲突 auto-merge；不接管任务调度；不追求全局时间全序；不做书签增量读（增量定位用 git 原生 `log`/`diff`）。
+
+## 14. 分级提交与推送（项目状态实时上云）
+
+> 目标：项目 repo 的 dev 分支成为「完整真相」，任何状态都在 GitHub。普通提交留痕即可、重要提交必须上云。
+> **指令为主、hook 为辅**：下方 §14.1 的规则是所有 agent（含装不了 hook 的）都必须遵守的；hook 只是部分环境的自动加速器，装了更省心，装不了也按指令手做。
+
+### 14.1 三档提交（所有 agent 必须遵守的指令）
+
+| 档位 | 时机 | 动作 |
+|---|---|---|
+| **普通 commit** | 每个小步（改函数/调通一段/修警告） | 本地 `git commit`；随后**主动 `git push origin dev`**（能推就推，失败可暂缓攒着，不打断工作） |
+| **重要 commit** | 功能完成 / bug 修复 / 方案敲定 / 测试通过 / 用户明说「存一下」「存档」/ 交接前 | commit message 加 `[important]` 前缀；**显式 `git push origin dev` 并校验退出码**，失败 → 停下提示「需要 git 认证」，不静默 |
+| **交接沉淀** | §3 沉淀流程 | 补推所有攒着的普通 commit（`git push` 天然带上全部未推送提交），**并校验 `git status` 确认 ahead=0** |
+
+> 无法装 hook 的环境，普通 commit 的自动推送就靠这条指令：**agent 每完成一个小步，commit 后顺手 push**；若 push 失败（弱网/无凭据），记在心里，在下一个「重要 commit」或「交接沉淀」时一起补推。交接前无论如何都要校验补推（双保险）。
+
+### 14.2 post-commit hook（可选自动加速器）
+
+- 仅对有 hook 能力的环境生效；hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」步骤幂等安装（`scripts/install-project-hook.sh`）。
+- hook 仅对 **dev 分支**生效（`git symbolic-ref --short HEAD` 判断，非 dev 跳过）。
+- hook 强制非交互（`GIT_TERMINAL_PROMPT=0`、`GIT_ASKPASS=/bin/true`），防止无凭据/弱网时卡死 commit。
+- 普通 commit push 失败静默；`[important]` 前缀的 commit push 失败回显警告。
+- **hook 不是必需的**：装不了 hook 的环境，靠 §14.1 的指令达成同样的结果。
+
+### 14.4 增量定位（不依赖书签）
+
+A→B→A 场景，A 回归时用 git 原生能力看 B 推进了什么（**无需任何书签机制**）：
+```sh
+git fetch origin && git log --oneline origin/dev          # B 的提交一览
+git diff <某commit>..origin/dev                            # 任意两点间的代码变化
+```
+全新 agent 则读最新一份交接快照（完整状态）冷启动。

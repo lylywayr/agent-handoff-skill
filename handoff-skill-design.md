@@ -427,6 +427,27 @@ hub pull 遇文档冲突：双份保留——旧版重命名 `冲突-<YYYYMMDD-H
   ```
 - **config 备份**：`~/.agent-handoff/config` 可入 dotfiles 备份（无凭据，安全）。
 
+## 8b. 分级提交与推送（v11 新增）
+
+> 缘起：实现「项目仓库 = 完整真相、任何状态都在 GitHub」的无缝接力。经 v4-pro 审查 + git 实测收敛。
+
+### 设计取舍（审查结论）
+
+- **放弃书签增量读**：原设想在交接文档记「各 agent 上次读到哪」的书签表，审查发现①书签是可变状态、不能塞进不可变的交接快照（无权威版本）②里程碑 squash/reset 后书签指向孤儿 commit、`git log 书签..dev` 语义错乱③按 agent 记书签维度错（应按任务）④真实收益有限——重读叙事快照才是成本大头，而 git 原生 `log`/`diff` 本就能查任意两点增量。故**增量定位交给 git 原生能力**，不另造书签系统。
+- **保留分级提交**：普通 commit（每小步，留痕+静默推）、重要 commit（`[important]` 前缀+显式推+失败停下）、交接沉淀（补推）。
+
+### 关键实现点（均经实测）
+
+**指令为主、hook 为辅**：hook 不是必需组件，只是「有 hook 能力环境」的自动加速器。真正的主体规则写在 SKILL.md §14.1 指令里，所有 agent（含装不了 hook 的）都遵守：普通 commit 后主动 push（失败可暂缓）、重要 commit 显式 push 校验、交接前补推校验。装不了 hook 的环境靠指令达成同样的「普通留痕、重要必上云」结果。
+
+
+
+1. post-commit hook 装在**项目 repo**（非 hub），由「确保项目 repo 就绪」幂等安装。
+2. hook 仅对 dev 分支生效（`git symbolic-ref --short HEAD` 判断）。
+3. hook 强制非交互（`GIT_TERMINAL_PROMPT=0`、`GIT_ASKPASS=/bin/true`），实测无凭据时 commit 不卡死。
+4. 普通 commit push 失败静默；`[important]` 前缀 push 失败回显警告（实测正确）。
+5. 补推跨 reset 边界：先 `fetch` + `is-ancestor 本地dev origin/dev` 判定，分叉走 §4.3a wip 留痕，不直推。
+
 ## 9. 明确不做（Out of Scope）
 
 - 不做实时双向协同（离散快照序列 + §5 并发模型）；
