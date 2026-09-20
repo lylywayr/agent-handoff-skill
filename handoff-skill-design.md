@@ -1,6 +1,7 @@
-# 跨 Agent 接力 Skill — 实施规格书（v10 终稿）
+# 跨 Agent 接力 Skill — 实施规格书（v10.1 修订版）
 
-> 状态：已收敛，可直接作为实现蓝本。
+> 状态：v1.0.1 实现修订，可直接作为实现蓝本。
+> v10.1 修订：修复 `save-handoff.sh` 的 INDEX CAS 丢文档风险；保存改为「文档先远端、INDEX 后 CAS」两阶段提交，并补充本地 bare remote 回归测试。
 > v10 修订：§4.3a `new_branch_name` 函数 `local base="$1" w="$base"` 拆为两行（修复同行多赋值导致 `$base` 不展开、`w` 恒空、`checkout -b ""` 崩溃的致命 bug，实测确认）。
 > v9 修订：§3.10 URL 内嵌凭据正则用户名段 `+`→`*`（修复空用户名形态 `redis://:pwd@` 漏检）。
 > v8 修订（v7 全文终审）：§3.5 探测命令改显式取登录名（修复 `{owner}` 误展开）；§3.5 失败分级改解析 HTTP 状态码；§3.10 凭据扫描统一 `grep -E` 并补全高危形态；§3.3 明确 `.handoff-project` 随 README 先于推 main 提交、dev 继承；§5.4 补 blob SHA 命令 `git rev-parse origin/main:INDEX.md`。
@@ -196,7 +197,7 @@ printf '%s' "$PENDING_CONTENT" | grep -Eq "$SECRET_RE" && { echo "命中疑似�
 3. **多任务归属判定**：查 INDEX 该项目活跃任务 → 续写对应任务线（项目内最大序列号+1）或新建（序列号从 1）。**内容来源 = 当前会话上下文的结构化摘要**；本会话无任务上下文 → **拒绝沉淀**，提示「先同步接手再交接」。
 4. **生成**：按 §3.8 模板 + §3.7 命名（含碰撞兜底）；更新 INDEX（§4.5）。状态首次「已完成」→ 同 commit 内联动归档（§4.4）。
 5. **安全检查**：§3.10 扫描，命中拒写。
-6. **提交（顺序约束）**：**交接文档 commit 先于 INDEX 指针 commit push**（同一 agent 内严格串行），保证 INDEX 指针永不指向未上远端的文件；输出一句话摘要 + 路径。
+6. **提交（顺序约束）**：交接文档（首次建项目时含 README）必须先 commit 并 push 到 hub 远端；远端文档成功后，才生成并 push INDEX 指针。INDEX CAS 重试允许 reset 到最新 `origin/main`，因为文档提交已在远端；文档 push 失败则停止并保留本地提交，不修改 INDEX。
 
 ### 4.2 接手（Resume）
 
@@ -400,6 +401,7 @@ fi
 
 INDEX 更新采用「fetch 后比对 **INDEX.md 的 blob SHA**（非整个 hub HEAD，避免无关项目并发触发误重试），变了就重判归属再提交」。取 blob SHA 的命令（已实测）：`git rev-parse origin/main:INDEX.md`（fetch 后返回远端 INDEX.md 的 blob SHA；与本地待提交版本比对，不同则重判）。**重试上限 3 次**，超限转 §5.3 语义合并路径。序列号仅在 CAS 写回 INDEX 成功后生效，撞号时 CAS 冲突重取。
 
+为满足「文档 commit 先于 INDEX 指针」且避免 CAS 失败丢文档，保存实现采用两阶段提交：先将交接文档（首次建项目时含 README）commit 并 push 到 `origin/main`，再基于最新 INDEX 生成指针并 CAS push。INDEX 阶段允许 `reset --hard origin/main`，因为文档副本已经在远端；文档阶段 push 失败则保留本地提交并停止，不修改 INDEX。
 ### 5.5 文档冲突裁决
 
 hub pull 遇文档冲突：双份保留——旧版重命名 `冲突-<YYYYMMDD-HHmm>-<agent名>.md` 存档；**以远端版本为准、本地版存档，不做内容级 merge**；INDEX 追加冲突记录；下次交互一句话告知。
@@ -480,6 +482,8 @@ agent-handoff/
 │   ├── init-hub.sh                 # 初始化/发现 hub（幂等；§3.5 三层降级）
 │   ├── save-handoff.sh             # 提交推送交接（含 §3.7 碰撞兜底 + §3.10 扫描 + §5.4 CAS）
 │   └── list-active.sh              # 列出活跃交接（解析 INDEX）
+├── tests/
+│   └── run-local-tests.sh          # 本地 bare remote 回归测试（无需 GitHub）
 └── FALLBACK.md                     # 降级指南（§6 建议文件闭环 + 手填字段级指令）
 ```
 

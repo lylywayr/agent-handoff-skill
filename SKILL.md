@@ -1,6 +1,6 @@
 ---
 name: agent-handoff
-version: 1.0.0
+version: 1.0.1
 description: 跨 AI agent 工作接力。当用户说"交接一下""存档进度""接着上次做""继续之前的任务"，或会话进入收尾/任务切换阶段时使用。将工作状态沉淀到 GitHub 私有交接总仓，或从仓库读取状态无缝恢复工作，支持 DeepSeek Harness / Codex / Claude Code / OpenMinis，IDE agent 优雅降级。
 ---
 
@@ -79,7 +79,7 @@ fi
 3. **多任务归属判定**：查 INDEX 该项目活跃任务 → 续写对应任务线（项目内最大 seq+1）或新建（seq 从 1）。**内容来源 = 当前会话上下文的结构化摘要**；本会话无任务上下文 → **拒绝沉淀**，提示「先同步接手再交接」。
 4. **生成交接文档**（中文，模板见 §9 / `templates/handoff-template.md`）：文件名 `<YYYYMMDD-HHmmss>-<agent>-<任务简述>.md`，碰撞兜底 `while [ -e "$f" ]; do f="${f%.md}-$(openssl rand -hex 2).md"; done`。更新 INDEX（§6）。状态首次「已完成」→ 同 commit 内联动归档（§7）。
 5. **安全检查**（§8）：凭据扫描，命中**拒写并提醒**。
-6. **提交（顺序约束）**：**交接文档 commit 先于 INDEX 指针 commit push**，保证指针永不指向未上远端的文件。输出一句话摘要 + 路径。
+6. **提交（顺序约束）**：交接文档（首次建项目时含 README）必须先 commit 并 push 到 hub 远端；远端文档成功后，才生成并 push INDEX 指针。`scripts/save-handoff.sh` 的 INDEX CAS 重试可以 reset 到最新 `origin/main`，但不再依赖未推送的文档提交；文档 push 失败则停止并保留本地提交，不修改 INDEX。
 
 ## 4. 接手（Resume）
 

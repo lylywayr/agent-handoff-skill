@@ -39,6 +39,16 @@ Skill 是「单文件夹 + `SKILL.md`（YAML frontmatter）」的通用格式（
 
 > 交接文档默认全中文；项目代码放在各项目自己的 GitHub 仓库（main 正式版 / dev 工作版），交接文档统一放 hub，双仓分离。
 
+### 本地回归测试
+
+在不连接 GitHub 的情况下，可用临时 bare Git remote 验证核心路径：
+
+```sh
+bash tests/run-local-tests.sh
+```
+
+测试覆盖单 agent 沉淀、并发沉淀与 INDEX push 重试、凭据拒写，以及全新 hub clone 的项目定位。它不能替代真实 GitHub 权限与跨 agent 冷启动验收，但可作为每次脚本改动后的快速门禁。
+
 ## 仓库内容
 
 ```
@@ -46,6 +56,8 @@ agent-handoff-skill/
 ├── SKILL.md                     # 主文件：frontmatter + 全部行为指令（自包含）
 ├── templates/                   # 中文模板：交接文档 / INDEX / 项目README / config
 ├── scripts/                     # POSIX shell 脚本：init-hub / save-handoff / list-active
+├── tests/
+│   └── run-local-tests.sh        # 本地 bare remote 回归测试（无需 GitHub）
 ├── FALLBACK.md                  # 降级环境（无 git/shell）使用指南
 ├── handoff-skill-design.md      # 实施规格书（完整设计原理，经多轮评审+真机实测收敛）
 └── README.md

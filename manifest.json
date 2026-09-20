@@ -1,6 +1,6 @@
 {
   "name": "agent-handoff",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "跨 AI agent 工作接力：沉淀工作状态到 GitHub 私有交接总仓，另一 agent 读取后无缝继续",
   "entry": "SKILL.md",
   "scriptsDir": "scripts/",
