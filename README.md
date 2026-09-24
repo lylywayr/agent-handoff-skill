@@ -1,5 +1,19 @@
 # agent-handoff-skill
 
+> v1.1.0：同一个、与具体 Agent 无关的 Skill，同时管理**长期项目连续性**与**跨 Agent 工作接力**。已绑定项目的事实以项目 Git 仓库或具备版本保护的知识库为准；GitHub 私有交接 Hub 是按需启用的任务接力通道，不是第二份项目正史。
+
+## 两种任务模式
+
+- **日常项目任务**：确认绑定和工作分支 → 核对远端最新 revision 与本地残留 → 定向检索相关模块的需求、ADR、Bug 与历史提交 → 经授权实施和验证 → 同一提交记录变更原因、证据和风险 → 核验远端同步。只读问题与单纯讨论不自动写文件或推送。
+- **新项目**：经用户确认位置、远端所有者、仓库名与可见性后建立本地项目基线；获准时创建远端并首次推送，失败则明确区分本地/远端状态。默认私有、默认 `main`，不强制 `dev` 或 Hub。
+- **跨 Agent 接力**：只有项目明确启用 Hub 工作模式时，才使用下文的 Hub、`main/dev`、WIP 留痕和相关脚本。Hub 保存任务/未完工作指针；新 Agent 回项目事实源核实后继续。
+
+项目记录建议格式见 [项目事实源约定](references/project-memory-schema.md)，权限、任务分流与冲突恢复见 [统一任务契约](references/workflow-contract.md)；主行为规范见 [SKILL.md](SKILL.md)。
+
+## 传统 Hub 交接模式（选用时生效）
+
+> 下文展示原有 Hub 双仓模式的用法。未采用 Hub 的项目不要照此切 `dev` 或运行相关脚本。
+
 > 跨 AI Agent 工作接力 Skill：让一个 agent 把工作状态沉淀到 GitHub 私有交接总仓，另一个 agent（跨平台/跨设备）读取后无缝继续，**用户无需重复说明背景**。
 
 今天用 DeepSeek Harness、明天用 Codex、后天用 Claude Code 或 OpenMinis——不再每次换工具都重新解释一遍前因后果。
@@ -39,6 +53,16 @@ Skill 是「单文件夹 + `SKILL.md`（YAML frontmatter）」的通用格式（
 
 > 交接文档默认全中文；项目代码放在各项目自己的 GitHub 仓库（main 正式版 / dev 工作版），交接文档统一放 hub，双仓分离。
 
+### 本地回归测试
+
+在不连接 GitHub 的情况下，可用临时 bare Git remote 验证核心路径：
+
+```sh
+bash tests/run-local-tests.sh
+```
+
+测试覆盖单 agent 沉淀、并发沉淀与 INDEX push 重试、凭据拒写，以及全新 hub clone 的项目定位。另运行 `python3 tests/test-project-continuity.py`，在临时本地 Git 裸仓验证非 `dev` 初始化、远端读回与并发拒推保留提交。两者不能替代真实 GitHub 权限、知识库 CAS 或跨 Agent 冷启动验收。
+
 ## 仓库内容
 
 ```
@@ -46,6 +70,12 @@ agent-handoff-skill/
 ├── SKILL.md                     # 主文件：frontmatter + 全部行为指令（自包含）
 ├── templates/                   # 中文模板：交接文档 / INDEX / 项目README / config
 ├── scripts/                     # POSIX shell 脚本：init-hub / save-handoff / list-active
+├── tests/
+│   ├── run-local-tests.sh        # Hub 本地 bare remote 回归测试
+│   └── test-project-continuity.py # 项目初始化/并发 Git 探针
+├── references/                  # 项目事实源建议格式与统一任务契约
+├── AGENTS.md                    # Agent 无关的项目事实源入口
+├── docs/project-memory/         # 本项目的索引、当前态、年度变更日志
 ├── FALLBACK.md                  # 降级环境（无 git/shell）使用指南
 ├── handoff-skill-design.md      # 实施规格书（完整设计原理，经多轮评审+真机实测收敛）
 └── README.md
