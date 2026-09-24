@@ -1,7 +1,7 @@
 {
   "name": "agent-handoff",
-  "version": "1.0.1",
-  "description": "跨 AI agent 工作接力：沉淀工作状态到 GitHub 私有交接总仓，另一 agent 读取后无缝继续",
+  "version": "1.1.0",
+  "description": "跨 Agent 工作接力与跨会话项目连续性：从项目事实源恢复、按需检索、经授权写回迭代记录；可选 GitHub 私有 Hub 交接",
   "entry": "SKILL.md",
   "scriptsDir": "scripts/",
   "templatesDir": "templates/",
@@ -21,10 +21,21 @@
   "docs": [
     "FALLBACK.md",
     "README.md",
-    "handoff-skill-design.md"
+    "AGENTS.md",
+    "docs/project-memory/INDEX.md",
+    "docs/project-memory/STATUS.md",
+    "docs/project-memory/logs/2026.md",
+    "handoff-skill-design.md",
+    "references/project-memory-schema.md",
+    "references/workflow-contract.md"
   ],
   "capabilities": [
     "cross-agent-handoff",
+    "project-continuity",
+    "project-repository-bootstrap",
+    "project-history-retrieval",
+    "project-change-ledger",
+    "knowledge-base-cas-contract",
     "work-state-persistence",
     "git-based-sync",
     "conflict-resolution",

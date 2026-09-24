@@ -1,6 +1,7 @@
-# 跨 Agent 接力 Skill — 实施规格书（v10.1 修订版）
+# 跨 Agent 接力 Skill — Hub 模式实施规格书（v10.1 修订版）
 
-> 状态：v1.0.1 实现修订，可直接作为实现蓝本。
+> 本规格书记录 v1.0.1 的 **GitHub Hub 双分支交接模式**，不是 v1.1.0 日常项目连续性的完整规格。v1.1.0 的新任务路由、授权与项目事实源规则以 [SKILL.md](SKILL.md) §15、[统一任务契约](references/workflow-contract.md) 和 [项目事实源约定](references/project-memory-schema.md) 为准；与本规格书固定 `main/dev` 假设冲突时，不可把旧命令套用于非 Hub 项目。
+> 状态：v1.0.1 Hub 模式实现修订，可作为已启用 Hub 项目的实现蓝本。
 > v10.1 修订：修复 `save-handoff.sh` 的 INDEX CAS 丢文档风险；保存改为「文档先远端、INDEX 后 CAS」两阶段提交，并补充本地 bare remote 回归测试。
 > v10 修订：§4.3a `new_branch_name` 函数 `local base="$1" w="$base"` 拆为两行（修复同行多赋值导致 `$base` 不展开、`w` 恒空、`checkout -b ""` 崩溃的致命 bug，实测确认）。
 > v9 修订：§3.10 URL 内嵌凭据正则用户名段 `+`→`*`（修复空用户名形态 `redis://:pwd@` 漏检）。
